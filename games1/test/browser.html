@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<title>BOOT</title>
+</head>
+<body>
+<canvas id="game" width="960" height="540"></canvas>
+<script>
+  /* Headless sinov uchun: xatolar document.title'ga yoziladi. */
+  var errors = [];
+  window.onerror = function (msg, src, line, col, err) {
+    errors.push(msg + ' @' + line);
+    document.title = 'ERROR: ' + errors.join(' | ');
+    return false;
+  };
+  window.addEventListener('unhandledrejection', function (e) {
+    document.title = 'ERROR: rejection ' + e.reason;
+  });
+</script>
+<script src="../game.js"></script>
+<script>
+  /* O'yinni ishga tushirib, bir necha yuz kadr simulyatsiya qilamiz. */
+  setTimeout(function () {
+    try {
+      if (!window.__game) throw new Error('__game hook yo\'q');
+      window.__game.start();
+      for (var i = 0; i < 400; i++) {
+        window.__game.step(1);
+      }
+      var st = window.__game.state;
+      var lvl = window.__game.level;
+      if (st !== 'play' && st !== 'clear' && st !== 'over' && st !== 'pause') {
+        throw new Error('g\'alati holat: ' + st);
+      }
+      /* --- sichqoncha boshqaruvi tekshiruvi --- */
+      var cv = document.getElementById('game');
+      var r = cv.getBoundingClientRect();
+      function fire(type, x, y) {
+        cv.dispatchEvent(new MouseEvent(type, {
+          bubbles: true, button: 0,
+          clientX: r.left + x * (r.width / 960),
+          clientY: r.top + y * (r.height / 540),
+        }));
+      }
+      window.__game.player.atkCd = 0;
+      window.__game.player.atk = 0;
+      fire('mousedown', 500, 300);
+      window.__game.step(1);
+      if (!(window.__game.player.atk > 0)) throw new Error('sichqoncha chap tugma hujumni boshlamadi');
+      if (Math.abs(window.__game.mouse.x - 500) > 2) {
+        throw new Error('sichqoncha kordinatsiasi notogri: ' + window.__game.mouse.x);
+      }
+      /* X tugmasi hujum qilmasligi kerak */
+      window.__game.player.atkCd = 0;
+      window.__game.player.atk = 0;
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyX' }));
+      window.__game.step(1);
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyX' }));
+      if (window.__game.player.atk !== 0) throw new Error('X tugmasi hali ham hujum qilmoqda');
+      /* --- TELEFON: haqiqiy TouchEvent bilan ekran tugmalari --- */
+      var rr = cv.getBoundingClientRect();
+      function toClient(cx, cy) {
+        return { x: rr.left + cx * (rr.width / 960), y: rr.top + cy * (rr.height / 540) };
+      }
+      function touchFire(type, pts) {
+        var list = pts.map(function (p, i) {
+          var c = toClient(p[0], p[1]);
+          return new Touch({ identifier: i, target: cv, clientX: c.x, clientY: c.y });
+        });
+        cv.dispatchEvent(new TouchEvent(type, {
+          bubbles: true, cancelable: true,
+          touches: type === 'touchend' ? [] : list,
+          changedTouches: list,
+        }));
+      }
+      /* chap tugma bosilganda o'yinchi chapga yurishi kerak */
+      touchFire('touchstart', [[60, 470]]);
+      window.__game.step(1);
+      var tx0 = window.__game.player.x;
+      for (var ti = 0; ti < 30; ti++) window.__game.step(1);
+      if (!(window.__game.player.x < tx0 - 30)) {
+        throw new Error('touch chap tugma ishlamadi: ' + tx0 + ' -> ' + window.__game.player.x);
+      }
+      touchFire('touchend', [[60, 470]]);
+      window.__game.step(1);
+      /* sakrash tugmasi */
+      window.__game.player.onGround = true;
+      touchFire('touchstart', [[890, 470]]);
+      window.__game.step(1);
+      if (!(window.__game.player.vy < 0)) throw new Error('touch sakrash tugmasi ishlamadi');
+      touchFire('touchend', [[890, 470]]);
+      /* bo'sh joy = hujum */
+      window.__game.player.atkCd = 0;
+      window.__game.player.atk = 0;
+      touchFire('touchstart', [[400, 200]]);
+      window.__game.step(1);
+      if (!(window.__game.player.atk > 0)) throw new Error('touch hujum ishlamadi');
+      touchFire('touchend', [[400, 200]]);
+      /* --- render haqiqatan chizilganini piksel bilan tekshiramiz --- */
+      var cx = cv.getContext('2d');
+      var data = cx.getImageData(0, 0, cv.width, cv.height).data;
+      var colors = {}, nonzero = 0;
+      for (var p = 0; p < data.length; p += 4 * 97) {
+        var key = data[p] + ',' + data[p + 1] + ',' + data[p + 2];
+        colors[key] = (colors[key] || 0) + 1;
+        if (data[p] + data[p + 1] + data[p + 2] > 40) nonzero++;
+      }
+      var distinct = Object.keys(colors).length;
+      if (distinct < 8) throw new Error('render juda oddiy: ranglar=' + distinct);
+      if (nonzero < 100) throw new Error('render deyarli bo\'sh: yorug\' piksel=' + nonzero);
+      if (errors.length) return;
+      document.title = 'OK state=' + st + ' level=' + lvl + ' score=' + window.__game.score +
+        ' colors=' + distinct + ' lit=' + nonzero + ' mouse=ok xkey=off touch=ok';
+    } catch (e) {
+      document.title = 'ERROR: ' + (e && e.message ? e.message : String(e));
+    }
+  }, 300);
+</script>
+</body>
+</html>

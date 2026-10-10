@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head><meta charset="UTF-8"><title>REC</title></head>
+<body>
+<canvas id="game" width="960" height="540"></canvas>
+<script src="../node_modules/omggif/omggif.js"></script>
+<script src="../game.js"></script>
+<script>
+  /* O'yin sahnasini yozib, GIF kodlaydi. Natija #out ichida (base64). */
+  var G = window.__game;
+  var SW = 480, SH = 270;           /* GIF o'lchami */
+  var FPS = 12;                     /* 12 fps */
+  var DURATION = 6;                 /* soniya */
+  var out = document.createElement('div');
+  out.id = 'out';
+  document.body.appendChild(out);
+
+  function grab() {
+    var cv = document.getElementById('game');
+    var t = document.createElement('canvas');
+    t.width = SW; t.height = SH;
+    var c = t.getContext('2d');
+    c.drawImage(cv, 0, 0, SW, SH);
+    return c.getImageData(0, 0, SW, SH).data;
+  }
+
+  function b64(bytes) {
+    var s = '', CH = 0x8000;
+    for (var i = 0; i < bytes.length; i += CH) {
+      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    }
+    return btoa(s);
+  }
+
+  setTimeout(function () {
+    try {
+      if (typeof GifWriter === 'undefined') throw new Error('omggif yuklanmadi');
+      G.start();
+
+      var frames = Math.round(FPS * DURATION);
+      var stepMs = 1000 / FPS;
+      var framesData = [];
+      var elapsed = 0;
+
+      /* Ssenariyni oldindan yuritamiz: yurish + sakrash + hujum */
+      for (var i = 0; i < frames; i++) {
+        elapsed += stepMs;
+        /* har kadrni ~16.7ms bo'lib bir nechta step ga ajratamiz */
+        var reps = Math.max(1, Math.round(stepMs / 16.67));
+        for (var r = 0; r < reps; r++) {
+          if (r === 0) {
+            if (i % 24 < 12) press('ArrowRight'); else press('ArrowLeft');
+            if (i % 18 === 0) tapKey('Space');
+            if (i % 12 === 4) G.mouse.clicked = true;   /* chap tugma = hujum */
+            G.mouse.x = G.player.x + (G.player.facing > 0 ? 260 : -260);
+            G.mouse.y = G.player.y + 20;
+          } else {
+            release('ArrowRight'); release('ArrowLeft');
+          }
+          G.step(1);
+        }
+        framesData.push(grab());
+      }
+
+      /* GIF kodlash — 3-3-2 (256 rang) oddiy palitra.
+         omggif palitrani 0xRRGGBB sonlar massivi sifatida oladi. */
+      var buf = new Uint8Array(SW * SH * framesData.length * 2 + 1024 * 256);
+      var gw = new GifWriter(buf, SW, SH, { loop: 0 });
+      var palette = [];
+      for (var e = 0; e < 256; e++) {
+        var r8 = ((e >> 5) & 7) * 255 / 7;
+        var g8 = ((e >> 2) & 7) * 255 / 7;
+        var b8 = (e & 3) * 255 / 3;
+        palette.push((Math.round(r8) << 16) | (Math.round(g8) << 8) | Math.round(b8));
+      }
+      var delay = Math.round(100 / FPS);
+      for (var f = 0; f < framesData.length; f++) {
+        var px = framesData[f];
+        var idx = new Uint8Array(SW * SH);
+        for (var p = 0, q = 0; p < px.length; p += 4, q++) {
+          idx[q] = ((px[p] >> 5) << 5) | ((px[p + 1] >> 5) << 2) | (px[p + 2] >> 6);
+        }
+        gw.addFrame(0, 0, SW, SH, idx, { palette: palette, delay: delay });
+      }
+
+      var len = gw.end();
+      out.textContent = b64(buf.subarray(0, len));
+      out.setAttribute('data-frames', framesData.length);
+      document.title = 'GIF ok frames=' + framesData.length;
+    } catch (e) {
+      document.title = 'ERROR ' + (e && e.message ? e.message : String(e));
+    }
+  }, 300);
+
+  function press(code) {
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: code }));
+  }
+  function release(code) {
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: code }));
+  }
+  function tapKey(code) { press(code); setTimeout(function () { release(code); }, 30); }
+</script>
+</body>
+</html>

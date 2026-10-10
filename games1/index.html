@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xazina Quvgu — Arcade Platformer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: #07070d;
+    color: #cfd3ff;
+    font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+  }
+  #wrap {
+    position: relative;
+    width: min(100%, 1100px);
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 0 0 2px #1d2050, 0 18px 60px rgba(0,0,0,.7), 0 0 60px rgba(80,90,255,.15);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #0a0a14;
+    image-rendering: auto;
+    cursor: none;          /* o'yin ichida o'z nishonimizni chizamiz */
+    touch-action: none;    /* telefonda sikrash/jurish uchun */
+  }
+  #hint {
+    font-size: 12px;
+    letter-spacing: .4px;
+    opacity: .55;
+    text-align: center;
+    line-height: 1.6;
+  }
+  kbd {
+    background: #171a3a;
+    border: 1px solid #2c3070;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: inherit;
+    font-size: 11px;
+    color: #aeb6ff;
+  }
+</style>
+</head>
+<body>
+  <div id="wrap"><canvas id="game" width="960" height="540"></canvas></div>
+  <div id="hint">
+    <kbd>←</kbd><kbd>→</kbd> yurish &nbsp; <kbd>Space</kbd> sakrash (2 martaga!) &nbsp;
+    <b>sichqoncha (LMB)</b> hujum / tasdiqlash &nbsp;
+    <kbd>P</kbd> pauza &nbsp; <kbd>M</kbd> musiqa &nbsp;
+    <span style="opacity:.7">📱 telefonda: pastdagi ◀ ▶ ⤒ ekran tugmalari</span>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
